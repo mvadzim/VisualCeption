@@ -14,7 +14,7 @@ modules:
         - VisualCeption:
             maximumDeviation: 5                                   # deviation in percent
             saveCurrentImageIfFailure: true                       # if true, VisualCeption saves the current
-            fullScreenShot: true                                  # fullpage screenshot
+            fullScreenShot: resize                                # fullpage screenshot (resize/scroll/false)
             referenceImageDir: "/home/qa/img_storage/[browser]/"  # "[browser]" replaced to "firefox"
             currentImageDir: "visualception/current/[browser]/"   # tests/_output/visualception/current/firefox/
             report: "visualception/report_[browser].html"         # tests/_output/visualception/report_firefox.html

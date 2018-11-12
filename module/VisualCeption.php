@@ -384,8 +384,9 @@ class VisualCeption extends CodeceptionModule
 
         $elementPath = $this->getScreenshotPath($identifier);
         $screenShotImage = new \Imagick();
-
-        if ($this->config["fullScreenShot"] == true) {
+        $width = 0;
+        $height = 0;
+        if ($this->config["fullScreenShot"] == "true" || $this->config["fullScreenShot"] == "scroll") {
             $height = $this->webDriver->executeScript("var ele=document.querySelector('html'); return ele.scrollHeight;");
             $viewportHeight = $this->webDriver->executeScript("return window.innerHeight");
 
@@ -406,15 +407,34 @@ class VisualCeption extends CodeceptionModule
             $fullShot = $screenShotImage->appendImages(true);
             $fullShot->writeImage($elementPath);
 
-        } else {
-            $this->hideElementsForScreenshot($excludeElements);
-            $screenshotBinary = $this->webDriver->takeScreenshot();
-            $this->resetHideElementsForScreenshot($excludeElements);
+            return $elementPath;
 
-            $screenShotImage->readimageblob($screenshotBinary);
-            $screenShotImage->cropImage($coords['width'], $coords['height'], $coords['offset_x'], $coords['offset_y']);
-            $screenShotImage->writeImage($elementPath);
+        } elseif ($this->config["fullScreenShot"] == "resize") {
+
+            $width = $this->webDriver->manage()->window()->getSize()->getWidth();
+            $height = $this->webDriver->manage()->window()->getSize()->getHeight();
+
+            $fullHeight = $this->webDriver->executeScript('return Math.max( document.body.scrollHeight, document.body.offsetHeight, document.documentElement.clientHeight, document.documentElement.scrollHeight, document.documentElement.offsetHeight );');
+            $this->webDriverModule->resizeWindow(intval($width), intval($fullHeight));
+            if ($this->webDriver->executeScript('return window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight;') < $fullHeight) {
+                $this->webDriverModule->wait(0.5);
+            }
+            $this->debug('Resize browser window from ' . $width . 'x' . $height . ' to ' . intval($width) . 'x' . intval($fullHeight));
         }
+        $this->hideElementsForScreenshot($excludeElements);
+        $screenshotBinary = $this->webDriver->takeScreenshot();
+
+        if ($this->config["fullScreenShot"] == "resize") {
+            $this->webDriverModule->resizeWindow($width, $height);
+            $this->debug('Resize back to ' . $width . 'x' . $height);
+        }
+
+        $this->resetHideElementsForScreenshot($excludeElements);
+
+        $screenShotImage->readimageblob($screenshotBinary);
+        $screenShotImage->cropImage($coords['width'], $coords['height'], $coords['offset_x'], $coords['offset_y']);
+        $screenShotImage->writeImage($elementPath);
+
 
         return $elementPath;
     }
