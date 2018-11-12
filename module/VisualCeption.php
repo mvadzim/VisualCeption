@@ -74,13 +74,15 @@ class VisualCeption extends CodeceptionModule
             $this->config["currentImageDir"] = str_replace('[browser]', $browserName, $this->config["currentImageDir"]);
             $this->config['report'] = str_replace('[browser]', $browserName, $this->config['report']);
         }
-        if(!file_exists($this->config["referenceImageDir"])){
+        if (file_exists($this->config["referenceImageDir"])) {
+            $this->referenceImageDir = $this->config["referenceImageDir"];
+        } else {
             $this->debug("Directory does not exist: $this->referenceImageDir");
             $this->referenceImageDir = codecept_data_dir() . $this->config["referenceImageDir"];
-        }
-        if (!is_dir($this->referenceImageDir)) {
-            $this->debug("Creating directory: $this->referenceImageDir");
-            @mkdir($this->referenceImageDir, 0777, true);
+            if (!is_dir($this->referenceImageDir)) {
+                $this->debug("Creating directory: $this->referenceImageDir");
+                @mkdir($this->referenceImageDir, 0777, true);
+            }
         }
         $this->currentImageDir = codecept_output_dir() . $this->config["currentImageDir"];
         $this->_initVisualReport();
@@ -327,8 +329,8 @@ class VisualCeption extends CodeceptionModule
      */
     private function getScreenshotName($identifier)
     {
-        $signature = $this->test->getSignature();
-        return $this->utils->getTestFileName($signature, $identifier);
+        $identifier = str_replace(array('/', '\\'),array('.', '.'),$identifier);
+        return $identifier.'.png';
     }
 
     /**
@@ -537,4 +539,36 @@ class VisualCeption extends CodeceptionModule
         }
         $this->debug( "VisualCeptionReporter: templateFile = " . $this->templateFile );
     }
+
+    public function _encodeId($id)
+    {
+        return strtr(base64_encode(trim($id)), '+=/', '.-~');
+    }
+
+    public function _decodeId($id)
+    {
+        return base64_decode(strtr($id, '.-~', '+=/'));
+    }
+
+    public function seeVisualChangesInCurrentPage($excludeElements = array(), $deviation = null)
+    {
+        $currentPageUrl = $this->webDriverModule->_getCurrentUri();
+        $identifier = $this->_encodeId($currentPageUrl);
+        $this->compareVisualChanges($identifier, null, $excludeElements, $deviation, true);
+
+        // used for assertion counter in codeception / phpunit
+        $this->assertTrue(true);
+
+    }
+
+    public function dontSeeVisualChangesInCurrentPage($excludeElements = array(), $deviation = null)
+    {
+        $currentPageUrl = $this->webDriverModule->_getCurrentUri();
+        $identifier = $this->_encodeId($currentPageUrl);
+        $this->compareVisualChanges($identifier, null, $excludeElements, $deviation, false);
+
+        // used for assertion counter in codeception / phpunit
+        $this->assertTrue(true);
+    }
+
 }
