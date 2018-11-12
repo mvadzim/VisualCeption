@@ -23,13 +23,13 @@ class VisualCeption extends CodeceptionModule
     protected $config = [
         'maximumDeviation' => 0,
         'saveCurrentImageIfFailure' => true,
-        'referenceImageDir' => 'VisualCeption/',
-        'currentImageDir' => 'debug/visual/',
+        'referenceImageDir' => 'visualception/reference/[browser]/',
+        'currentImageDir' => 'visualception/current/[browser]/',
         'report' => false,
         'module' => 'WebDriver',
         'fullScreenShot' => false
     ];
-    
+
     protected $saveCurrentImageIfFailure;
     private $referenceImageDir;
 
@@ -67,8 +67,17 @@ class VisualCeption extends CodeceptionModule
 
         $this->maximumDeviation = $this->config["maximumDeviation"];
         $this->saveCurrentImageIfFailure = (boolean)$this->config["saveCurrentImageIfFailure"];
-        $this->referenceImageDir = (file_exists($this->config["referenceImageDir"]) ? "" : codecept_data_dir()) . $this->config["referenceImageDir"];
-
+        $this->webDriverModule = $this->getModule($this->config['module']);
+        if (false !== strpos($this->config["referenceImageDir"] . $this->config["currentImageDir"] . $this->config['report'], '[browser]')) {
+            $browserName = $this->webDriverModule->_getConfig('browser');
+            $this->config["referenceImageDir"] = str_replace('[browser]', $browserName, $this->config["referenceImageDir"]);
+            $this->config["currentImageDir"] = str_replace('[browser]', $browserName, $this->config["currentImageDir"]);
+            $this->config['report'] = str_replace('[browser]', $browserName, $this->config['report']);
+        }
+        if(!file_exists($this->config["referenceImageDir"])){
+            $this->debug("Directory does not exist: $this->referenceImageDir");
+            $this->referenceImageDir = codecept_data_dir() . $this->config["referenceImageDir"];
+        }
         if (!is_dir($this->referenceImageDir)) {
             $this->debug("Creating directory: $this->referenceImageDir");
             @mkdir($this->referenceImageDir, 0777, true);
@@ -120,12 +129,11 @@ class VisualCeption extends CodeceptionModule
             throw new \Codeception\Exception\ConfigurationException("VisualCeption requires ImageMagick PHP Extension but it was not installed");
         }
 
-        $this->webDriverModule = $this->getModule($this->config['module']);
         $this->webDriver = $this->webDriverModule->webDriver;
 
         $this->test = $test;
     }
-    
+
     /**
      * Get value of the private property $referenceImageDir
      *
@@ -143,7 +151,7 @@ class VisualCeption extends CodeceptionModule
      * @param string $identifier Identifies your test object
      * @param string $elementID DOM ID of the element, which should be screenshotted
      * @param string|array $excludeElements Element name or array of Element names, which should not appear in the screenshot
-     * @param float $deviation 
+     * @param float $deviation
      */
     public function seeVisualChanges($identifier, $elementID = null, $excludeElements = array(), $deviation = null)
     {
@@ -161,7 +169,7 @@ class VisualCeption extends CodeceptionModule
      * @param string $identifier identifies your test object
      * @param string $elementID DOM ID of the element, which should be screenshotted
      * @param string|array $excludeElements string of Element name or array of Element names, which should not appear in the screenshot
-     * @param float $deviation 
+     * @param float $deviation
      */
     public function dontSeeVisualChanges($identifier, $elementID = null, $excludeElements = array(), $deviation = null)
     {
@@ -366,7 +374,7 @@ class VisualCeption extends CodeceptionModule
      */
     private function createScreenshot($identifier, array $coords, array $excludeElements = array())
     {
-        $screenShotDir = \Codeception\Configuration::logDir() . 'debug/';
+        $screenShotDir = $this->currentImageDir.'debug/';
 
         if (!is_dir($screenShotDir)) {
             mkdir($screenShotDir, 0777, true);
@@ -447,7 +455,7 @@ class VisualCeption extends CodeceptionModule
      */
     private function getDeviationScreenshotPath ($identifier, $alternativePrefix = '')
     {
-        $debugDir = \Codeception\Configuration::logDir() . 'debug/';
+        $debugDir = $this->currentImageDir . 'debug/';
         $prefix = ( $alternativePrefix === '') ? 'compare' : $alternativePrefix;
         return $debugDir . $prefix . $this->getScreenshotName($identifier);
     }
@@ -516,7 +524,7 @@ class VisualCeption extends CodeceptionModule
         if (!$this->config['report']) {
             return;
         }
-        $this->logFile = \Codeception\Configuration::logDir() . 'vcresult.html';
+        $this->logFile = \Codeception\Configuration::logDir() . 'visualception/vcresult.html';
 
         if (array_key_exists('templateVars', $this->config)) {
             $this->templateVars = $this->config["templateVars"];
