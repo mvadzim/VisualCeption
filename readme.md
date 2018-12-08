@@ -1,7 +1,7 @@
 # VisualCeption fork
 
-Visual regression tests for [Codeception](http://codeception.com/).
- 
+This is **fork** of [visual regression tests for Codeception](https://github.com/Codeception/VisualCeption).
+
 [Get more information](https://github.com/Codeception/VisualCeption)
 
 #### Sample config:
@@ -17,5 +17,38 @@ modules:
             fullScreenShot: resize                                # fullpage screenshot (resize/scroll/false)
             referenceImageDir: "/home/qa/img_storage/[browser]/"  # "[browser]" replaced to "firefox"
             currentImageDir: "visualception/current/[browser]/"   # tests/_output/visualception/current/firefox/
-            report: "visualception/report_[browser].html"         # tests/_output/visualception/report_firefox.html
-```
+            report: true         # tests/_output/vcresult.html
+ ```
+## Note
+
+Форк делался для себя и под свои запросы, из-за этого не нужно надеятся на его стабильность и безбажность даже для базовых вариантов использования.
+
+#### Изменения:
+
+* Новые пути для сохраниения текщих и эиталонных скриншотов, "[browser]" в пути автоматически заменяется на имя браузера
+* Новые методы seeVisualChangesInCurrentPage и dontSeeVisualChangesInCurrentPage которым не нужно передавать идентификатор (им выступает урл страницы)
+* fullScreenShot: 'resize' - изменяет размер окна браузера на высоту страицы (нужно запускать на виртуальном экране большой высоты)
+* Новый шаблон для отчетов
+
+#### Простой пример
+ ```php
+class VisualCest
+{
+    /**
+     * @env firefox
+     * @env chrome
+     *
+     * @example(url="https://time.is/ru/Kyiv", wantTo="Страница точного времени в Киеве, этот тест будет постоянно падать")
+     * @example(url="https://github.com/pricing", wantTo="Страница с ценами на гитхаб, этот тест будет падать редко")
+     * @example(url="https://time.is/uk/Kyiv", wantTo="Сторінка точного часу в Києві, цей тест буде постійно падати")
+     */
+    public function visualTest(\AcceptanceTester $I, \Codeception\Example $example)
+    {
+        $I->wantTo('Визуальная проверка важных страниц');
+        $I->amOnUrl($example['url']);
+        $I->dontSeeVisualChangesInCurrentPage();
+    }
+}
+ ```
+
+![sample report screenshot](visualception-report.png) 

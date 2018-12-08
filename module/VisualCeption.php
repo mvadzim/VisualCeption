@@ -57,6 +57,7 @@ class VisualCeption extends CodeceptionModule
     private $utils;
 
     private $failed = array();
+    private $failedTestsMetadata = array();
     private $logFile;
     private $templateVars = array();
     private $templateFile;
@@ -94,6 +95,7 @@ class VisualCeption extends CodeceptionModule
             return;
         }
         $failedTests = $this->failed;
+        $failedTestsMetadata = $this->failedTestsMetadata;
         $vars = $this->templateVars;
         $referenceImageDir = $this->referenceImageDir;
         $i = 0;
@@ -111,7 +113,25 @@ class VisualCeption extends CodeceptionModule
     public function _failed(\Codeception\TestInterface $test, $fail)
     {
         if ($fail instanceof ImageDeviationException) {
-            $this->failed[$test->getSignature() . '.' . $fail->getIdentifier()] = $fail;
+            $key = $test->getSignature() . '.' . $fail->getIdentifier();
+            $this->failed[$key] = $fail;
+
+            $title = empty($test->getFeature()) ? $test->getName() : mb_strstr($test->getFeature() . "|", "|", true);
+            if (!is_null($test->getMetadata()->getCurrent('example')) && array_key_exists('wantTo', $test->getMetadata()->getCurrent('example'))){
+                $comment = $test->getMetadata()->getCurrent('example')['wantTo'];
+                $title = $title . ' (' . $comment. ')';
+            }
+            $url = $this->_decodeId($fail->getIdentifier());
+            $metadata = [
+                'title' => $title,
+                'url' => $url,
+                'referenceImagePath'=> $this->getExpectedScreenshotPath($fail->getIdentifier()),
+                'env' => $test->getMetadata()->getEnv(),
+                'file' => $test->getMetadata()->getFilename(),
+                'error'=> $fail->getMessage()
+            ];
+            $this->failedTestsMetadata[$key] = $metadata;
+
         }
     }
 
@@ -546,7 +566,7 @@ class VisualCeption extends CodeceptionModule
         if (!$this->config['report']) {
             return;
         }
-        $this->logFile = \Codeception\Configuration::logDir() . 'visualception/vcresult.html';
+        $this->logFile = \Codeception\Configuration::logDir() . '/vcresult.html';
 
         if (array_key_exists('templateVars', $this->config)) {
             $this->templateVars = $this->config["templateVars"];
@@ -572,7 +592,7 @@ class VisualCeption extends CodeceptionModule
 
     public function seeVisualChangesInCurrentPage($excludeElements = array(), $deviation = null)
     {
-        $currentPageUrl = $this->webDriverModule->_getCurrentUri();
+        $currentPageUrl = $this->webDriverModule->webDriver->getCurrentURL();
         $identifier = $this->_encodeId($currentPageUrl);
         $this->compareVisualChanges($identifier, null, $excludeElements, $deviation, true);
 
@@ -583,7 +603,7 @@ class VisualCeption extends CodeceptionModule
 
     public function dontSeeVisualChangesInCurrentPage($excludeElements = array(), $deviation = null)
     {
-        $currentPageUrl = $this->webDriverModule->_getCurrentUri();
+        $currentPageUrl = $this->webDriverModule->webDriver->getCurrentURL();
         $identifier = $this->_encodeId($currentPageUrl);
         $this->compareVisualChanges($identifier, null, $excludeElements, $deviation, false);
 
