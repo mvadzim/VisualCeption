@@ -112,7 +112,7 @@ class VisualCeption extends CodeceptionModule
         $itemsContent = ob_get_contents();
         ob_clean();
 
-        $logFileContent = file_get_contents($this->logFile);
+        $logFileContent = mb_convert_encoding(file_get_contents($this->logFile), 'UTF-8');
         $logFileContent = str_replace('<!--[END_ITEMS]-->', $itemsContent, $logFileContent);
         file_put_contents($this->logFile, $logFileContent);
     }
@@ -426,27 +426,26 @@ class VisualCeption extends CodeceptionModule
 
             $fullHeight = (int)$this->webDriver->executeScript('return Math.max( document.body.scrollHeight, document.body.offsetHeight, document.documentElement.clientHeight, document.documentElement.scrollHeight, document.documentElement.offsetHeight );');
             $this->webDriverModule->resizeWindow($width, $fullHeight);
-            if ($this->webDriver->executeScript('return window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight;') < $fullHeight) {
-                $this->webDriverModule->wait($this->operationTimeout);
-            }
             $this->debug('Resize browser window from ' . $width . 'x' . $height . ' to ' . $width . 'x' . $fullHeight);
         }
         $this->hideElementsForScreenshot($excludeElements);
         $this->deleteElementsForScreenshot($deleteElements);
+
         $screenshotBinary = $this->webDriver->takeScreenshot();
+        $screenShotImage->readimageblob($screenshotBinary);
+
+        if ($this->config["fullScreenShot"] != "resize") {
+            $screenShotImage->cropImage($coords['width'], $coords['height'], $coords['offset_x'], $coords['offset_y']);
+        }
+        $screenShotImage->writeImage($elementPath);
+
+        $this->resetHideElementsForScreenshot($excludeElements);
+        $this->resetDeleteElementsForScreenshot($deleteElements);
 
         if ($this->config["fullScreenShot"] == "resize") {
             $this->webDriverModule->resizeWindow($width, $height);
             $this->debug('Resize back to ' . $width . 'x' . $height);
         }
-
-        $this->resetHideElementsForScreenshot($excludeElements);
-        $this->resetDeleteElementsForScreenshot($deleteElements);
-
-        $screenShotImage->readimageblob($screenshotBinary);
-        $screenShotImage->cropImage($coords['width'], $coords['height'], $coords['offset_x'], $coords['offset_y']);
-        $screenShotImage->writeImage($elementPath);
-
 
         return $elementPath;
     }

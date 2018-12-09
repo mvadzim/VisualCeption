@@ -25,6 +25,7 @@
 
         #zoom {
             position: fixed;
+            overflow: scroll;
             display: none;
             z-index: 999;
             top: 0;
