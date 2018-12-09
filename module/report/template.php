@@ -24,7 +24,7 @@
         }
 
         #zoom {
-            position: absolute;
+            position: fixed;
             display: none;
             z-index: 999;
             top: 0;

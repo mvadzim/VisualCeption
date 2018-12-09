@@ -40,6 +40,7 @@ class VisualCeption extends CodeceptionModule
     private $currentImageDir;
 
     private $maximumDeviation = 0;
+    private $operationTimeout = 0.5;
 
     /**
      * @var RemoteWebDriver
@@ -175,9 +176,9 @@ class VisualCeption extends CodeceptionModule
      * @param string|array $excludeElements Element name or array of Element names, which should not appear in the screenshot
      * @param float $deviation
      */
-    public function seeVisualChanges($identifier, $elementID = null, $excludeElements = array(), $deviation = null)
+    public function seeVisualChanges($identifier, $elementID = null, $excludeElements = array(), array $deleteElements = array(), $deviation = null)
     {
-        $this->compareVisualChanges($identifier, $elementID, $excludeElements, $deviation, true);
+        $this->compareVisualChanges($identifier, $elementID, $excludeElements, $deleteElements, $deviation, true);
 
         // used for assertion counter in codeception / phpunit
         $this->assertTrue(true);
@@ -193,21 +194,22 @@ class VisualCeption extends CodeceptionModule
      * @param string|array $excludeElements string of Element name or array of Element names, which should not appear in the screenshot
      * @param float $deviation
      */
-    public function dontSeeVisualChanges($identifier, $elementID = null, $excludeElements = array(), $deviation = null)
+    public function dontSeeVisualChanges($identifier, $elementID = null, $excludeElements = array(), array $deleteElements = array(), $deviation = null)
     {
-        $this->compareVisualChanges($identifier, $elementID, $excludeElements, $deviation, false);
+        $this->compareVisualChanges($identifier, $elementID, $excludeElements, $deleteElements, $deviation, false);
 
         // used for assertion counter in codeception / phpunit
         $this->assertTrue(true);
     }
 
-    private function compareVisualChanges($identifier, $elementID, $excludeElements, $deviation, $seeChanges)
+    private function compareVisualChanges($identifier, $elementID, $excludeElements, $deleteElements, $deviation, $seeChanges)
     {
-        $excludeElements = (array) $excludeElements;
+        $excludeElements = (array)$excludeElements;
+        $deleteElements = (array)$deleteElements;
 
         $maximumDeviation = (!$deviation && !is_numeric($deviation)) ? $this->maximumDeviation : (float) $deviation;
 
-        $deviationResult = $this->getDeviation($identifier, $elementID, $excludeElements);
+        $deviationResult = $this->getDeviation($identifier, $elementID, $excludeElements, $deleteElements);
 
         if (is_null($deviationResult["deviationImage"])) {
             return;
@@ -230,7 +232,7 @@ class VisualCeption extends CodeceptionModule
             $message = "The deviation of the taken screenshot is too high";
         }
 
-        $message .=  " (" . $deviation . "%).\nSee $compareScreenshotPath for a deviation screenshot.";
+        $message .= " (" . round($deviation, 2) . "%).\n";
 
         return new ImageDeviationException(
                 $message,
@@ -241,39 +243,20 @@ class VisualCeption extends CodeceptionModule
         );
     }
 
-    /**
-     * Hide an element to set the visibility to hidden
-     *
-     * @param $elementSelector String of CSS Element selector, set visibility to hidden
-     */
-    private function hideElement($elementSelector)
+    private function setElementsAttribute(array $elementsSelector, $attributeName, $attributeValue)
     {
-        $this->setVisibility($elementSelector, false);
-    }
+        foreach ($elementsSelector as $element) {
 
-    /**
-     * Show an element to set the visibility to visible
-     *
-     * @param $elementSelector String of CSS Element selector, set visibility to visible
-     */
-    private function showElement($elementSelector)
-    {
-        $this->setVisibility($elementSelector, true);
-    }
-
-    private function setVisibility($elementSelector, $isVisible)
-    {
-      $styleVisibility = $isVisible ? 'visible' : 'hidden';
-      $this->webDriver->executeScript('
+            $this->webDriver->executeScript('
             var elements = [];
-            elements = document.querySelectorAll("' . $elementSelector . '");
+            elements = document.querySelectorAll("' . $element . '");
             if( elements.length > 0 ) {
                 for (var i = 0; i < elements.length; i++) {
-                    elements[i].style.visibility = "' . $styleVisibility . '";
+                    elements[i].style.' . $attributeName . ' = "' . $attributeValue . '";
                 }
             }
         ');
-        $this->debug("set visibility of element '$elementSelector' to '$styleVisibility'");
+        }
     }
 
     /**
@@ -284,10 +267,10 @@ class VisualCeption extends CodeceptionModule
      * @param array $excludeElements Element names, which should not appear in the screenshot
      * @return array Includes the calculation of deviation in percent and the diff-image
      */
-    private function getDeviation($identifier, $elementID, array $excludeElements = array())
+    private function getDeviation($identifier, $elementID, array $excludeElements = array(), array $deleteElements = array())
     {
         $coords = $this->getCoordinates($elementID);
-        $this->createScreenshot($identifier, $coords, $excludeElements);
+        $this->createScreenshot($identifier, $coords, $excludeElements, $deleteElements);
 
         $compareResult = $this->compare($identifier);
 
@@ -394,7 +377,7 @@ class VisualCeption extends CodeceptionModule
      * @param array $excludeElements List of elements, which should not appear in the screenshot
      * @return string Path of the current screenshot image
      */
-    private function createScreenshot($identifier, array $coords, array $excludeElements = array())
+    private function createScreenshot($identifier, array $coords, array $excludeElements = array(), array $deleteElements = array())
     {
         $screenShotDir = $this->currentImageDir.'debug/';
 
@@ -410,9 +393,9 @@ class VisualCeption extends CodeceptionModule
             $height = $this->webDriver->executeScript("var ele=document.querySelector('html'); return ele.scrollHeight;");
             $viewportHeight = $this->webDriver->executeScript("return window.innerHeight");
 
-            $itr = $height / $viewportHeight;
+            $itr = intval($height / $viewportHeight);
 
-            for ($i = 0; $i < intval($itr); $i++) {
+            for ($i = 0; $i < $itr; $i++) {
                 $screenshotBinary = $this->webDriver->takeScreenshot();
                 $screenShotImage->readimageblob($screenshotBinary);
                 $this->webDriver->executeScript("window.scrollBy(0, {$viewportHeight});");
@@ -420,7 +403,7 @@ class VisualCeption extends CodeceptionModule
 
             $screenshotBinary = $this->webDriver->takeScreenshot();
             $screenShotImage->readimageblob($screenshotBinary);
-            $heightOffset = $viewportHeight - ($height - (intval($itr) * $viewportHeight));
+            $heightOffset = $viewportHeight - ($height - ($itr * $viewportHeight));
             $screenShotImage->cropImage(0, 0, 0, $heightOffset * 2);
 
             $screenShotImage->resetIterator();
@@ -431,17 +414,18 @@ class VisualCeption extends CodeceptionModule
 
         } elseif ($this->config["fullScreenShot"] == "resize") {
 
-            $width = $this->webDriver->manage()->window()->getSize()->getWidth();
-            $height = $this->webDriver->manage()->window()->getSize()->getHeight();
+            $width = (int)$this->webDriver->manage()->window()->getSize()->getWidth();
+            $height = (int)$this->webDriver->manage()->window()->getSize()->getHeight();
 
-            $fullHeight = $this->webDriver->executeScript('return Math.max( document.body.scrollHeight, document.body.offsetHeight, document.documentElement.clientHeight, document.documentElement.scrollHeight, document.documentElement.offsetHeight );');
-            $this->webDriverModule->resizeWindow(intval($width), intval($fullHeight));
+            $fullHeight = (int)$this->webDriver->executeScript('return Math.max( document.body.scrollHeight, document.body.offsetHeight, document.documentElement.clientHeight, document.documentElement.scrollHeight, document.documentElement.offsetHeight );');
+            $this->webDriverModule->resizeWindow($width, $fullHeight);
             if ($this->webDriver->executeScript('return window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight;') < $fullHeight) {
-                $this->webDriverModule->wait(0.5);
+                $this->webDriverModule->wait($this->operationTimeout);
             }
-            $this->debug('Resize browser window from ' . $width . 'x' . $height . ' to ' . intval($width) . 'x' . intval($fullHeight));
+            $this->debug('Resize browser window from ' . $width . 'x' . $height . ' to ' . $width . 'x' . $fullHeight);
         }
         $this->hideElementsForScreenshot($excludeElements);
+        $this->deleteElementsForScreenshot($deleteElements);
         $screenshotBinary = $this->webDriver->takeScreenshot();
 
         if ($this->config["fullScreenShot"] == "resize") {
@@ -450,6 +434,7 @@ class VisualCeption extends CodeceptionModule
         }
 
         $this->resetHideElementsForScreenshot($excludeElements);
+        $this->resetDeleteElementsForScreenshot($deleteElements);
 
         $screenShotImage->readimageblob($screenshotBinary);
         $screenShotImage->cropImage($coords['width'], $coords['height'], $coords['offset_x'], $coords['offset_y']);
@@ -466,10 +451,8 @@ class VisualCeption extends CodeceptionModule
      */
     private function hideElementsForScreenshot(array $excludeElements)
     {
-        foreach ($excludeElements as $element) {
-            $this->hideElement($element);
-        }
-        if (!empty($excludeElements)) {
+        if ($excludeElements) {
+            $this->setElementsAttribute($excludeElements, 'visibility', 'hidden');
             $this->webDriverModule->waitForElementNotVisible(array_pop($excludeElements));
         }
     }
@@ -481,11 +464,25 @@ class VisualCeption extends CodeceptionModule
      */
     private function resetHideElementsForScreenshot(array $excludeElements)
     {
-        foreach ($excludeElements as $element) {
-            $this->showElement($element);
+        if($excludeElements) {
+            $this->setElementsAttribute($excludeElements, 'visibility', 'visible');
+            $this->webDriverModule->wait($this->operationTimeout);
         }
-        if (!empty($excludeElements)) {
-            $this->webDriverModule->waitForElementVisible(array_pop($excludeElements));
+    }
+
+    private function deleteElementsForScreenshot(array $deleteElements)
+    {
+        if ($deleteElements) {
+            $this->setElementsAttribute($deleteElements, 'display', 'none');
+            $this->webDriverModule->waitForElementNotVisible(array_pop($deleteElements));
+        }
+    }
+
+    private function resetDeleteElementsForScreenshot(array $deleteElements)
+    {
+        if ($deleteElements) {
+            $this->setElementsAttribute($deleteElements, 'display', '');
+            $this->webDriverModule->wait($this->operationTimeout);
         }
     }
 
@@ -590,22 +587,22 @@ class VisualCeption extends CodeceptionModule
         return base64_decode(strtr($id, '.-~', '+=/'));
     }
 
-    public function seeVisualChangesInCurrentPage($excludeElements = array(), $deviation = null)
+    public function seeVisualChangesInCurrentPage($excludeElements = array(), $deleteElements = array(), $deviation = null)
     {
         $currentPageUrl = $this->webDriverModule->webDriver->getCurrentURL();
         $identifier = $this->_encodeId($currentPageUrl);
-        $this->compareVisualChanges($identifier, null, $excludeElements, $deviation, true);
+        $this->compareVisualChanges($identifier, null, $excludeElements, $deleteElements, $deviation, true);
 
         // used for assertion counter in codeception / phpunit
         $this->assertTrue(true);
 
     }
 
-    public function dontSeeVisualChangesInCurrentPage($excludeElements = array(), $deviation = null)
+    public function dontSeeVisualChangesInCurrentPage($excludeElements = array(), $deleteElements = array(), $deviation = null)
     {
         $currentPageUrl = $this->webDriverModule->webDriver->getCurrentURL();
         $identifier = $this->_encodeId($currentPageUrl);
-        $this->compareVisualChanges($identifier, null, $excludeElements, $deviation, false);
+        $this->compareVisualChanges($identifier, null, $excludeElements, $deleteElements, $deviation, false);
 
         // used for assertion counter in codeception / phpunit
         $this->assertTrue(true);

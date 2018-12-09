@@ -2,8 +2,6 @@
 
 This is **fork** of [visual regression tests for Codeception](https://github.com/Codeception/VisualCeption).
 
-[Get more information](https://github.com/Codeception/VisualCeption)
-
 #### Sample config:
 ```yaml
 modules:
@@ -25,10 +23,11 @@ modules:
 
 #### Изменения:
 
-* Новые пути для сохраниения текщих и эиталонных скриншотов, "[browser]" в пути автоматически заменяется на имя браузера
+* Новые пути для сохраниения текущих и эталонных скриншотов, "[browser]" в пути автоматически заменяется на имя браузера
 * Новые методы seeVisualChangesInCurrentPage и dontSeeVisualChangesInCurrentPage которым не нужно передавать идентификатор (им выступает урл страницы)
 * fullScreenShot: 'resize' - изменяет размер окна браузера на высоту страицы (нужно запускать на виртуальном экране большой высоты)
 * Новый шаблон для отчетов
+* Возможность удалять элементы со страницы (display:none)
 
 #### Простой пример
  ```php
@@ -46,7 +45,7 @@ class VisualCest
     {
         $I->wantTo('Визуальная проверка важных страниц');
         $I->amOnUrl($example['url']);
-        $I->dontSeeVisualChangesInCurrentPage();
+        $I->dontSeeVisualChangesInCurrentPage(['div#twd'], ['iframe']); // div#twd set style "visibility: hidden;" iframe set "display: none;"
     }
 }
  ```
