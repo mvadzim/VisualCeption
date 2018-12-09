@@ -91,7 +91,7 @@ class VisualCeption extends CodeceptionModule
 
     public function _afterSuite()
     {
-        if (!$this->config['report']) {
+        if (!$this->config['report'] || ($this->config['report'] && !$this->failed)) {
             return;
         }
         $failedTests = $this->failed;
