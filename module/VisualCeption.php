@@ -1,4 +1,5 @@
 <?php
+
 namespace Codeception\Module;
 
 use Codeception\Module as CodeceptionModule;
@@ -60,8 +61,6 @@ class VisualCeption extends CodeceptionModule
     private $failed = array();
     private $failedTestsMetadata = array();
     private $logFile;
-    private $templateVars = array();
-    private $templateFile;
 
     public function _initialize()
     {
@@ -97,17 +96,25 @@ class VisualCeption extends CodeceptionModule
         }
         $failedTests = $this->failed;
         $failedTestsMetadata = $this->failedTestsMetadata;
-        $vars = $this->templateVars;
         $referenceImageDir = $this->referenceImageDir;
         $i = 0;
 
+        if (!file_exists($this->logFile)) {
+            ob_start();
+            include_once "report/MainTemplate.php";
+            $reportContent = ob_get_contents();
+            ob_clean();
+            file_put_contents($this->logFile, $reportContent);
+            $this->debug("Trying to store file (" . $this->logFile . ")");
+        }
         ob_start();
-        include_once $this->templateFile;
-        $reportContent = ob_get_contents();
+        include_once "report/ItemsTemplate.php";
+        $itemsContent = ob_get_contents();
         ob_clean();
 
-        $this->debug("Trying to store file (".$this->logFile.")");
-        file_put_contents($this->logFile, $reportContent);
+        $logFileContent = file_get_contents($this->logFile);
+        $logFileContent = str_replace('<!--[END_ITEMS]-->', $itemsContent, $logFileContent);
+        file_put_contents($this->logFile, $logFileContent);
     }
 
 
@@ -118,18 +125,18 @@ class VisualCeption extends CodeceptionModule
             $this->failed[$key] = $fail;
 
             $title = empty($test->getFeature()) ? $test->getName() : mb_strstr($test->getFeature() . "|", "|", true);
-            if (!is_null($test->getMetadata()->getCurrent('example')) && array_key_exists('wantTo', $test->getMetadata()->getCurrent('example'))){
+            if (!is_null($test->getMetadata()->getCurrent('example')) && array_key_exists('wantTo', $test->getMetadata()->getCurrent('example'))) {
                 $comment = $test->getMetadata()->getCurrent('example')['wantTo'];
-                $title = $title . ' (' . $comment. ')';
+                $title = $title . ' (' . $comment . ')';
             }
             $url = $this->_decodeId($fail->getIdentifier());
             $metadata = [
                 'title' => $title,
                 'url' => $url,
-                'referenceImagePath'=> $this->getExpectedScreenshotPath($fail->getIdentifier()),
+                'referenceImagePath' => $this->getExpectedScreenshotPath($fail->getIdentifier()),
                 'env' => $test->getMetadata()->getEnv(),
                 'file' => $test->getMetadata()->getFilename(),
-                'error'=> $fail->getMessage()
+                'error' => $fail->getMessage()
             ];
             $this->failedTestsMetadata[$key] = $metadata;
 
@@ -163,9 +170,9 @@ class VisualCeption extends CodeceptionModule
      * @return string Path to reference image dir
      */
     public function getReferenceImageDir()
-	{
-		return $this->referenceImageDir;
-	}
+    {
+        return $this->referenceImageDir;
+    }
 
     /**
      * Compare the reference image with a current screenshot, identified by their indentifier name
@@ -207,7 +214,7 @@ class VisualCeption extends CodeceptionModule
         $excludeElements = (array)$excludeElements;
         $deleteElements = (array)$deleteElements;
 
-        $maximumDeviation = (!$deviation && !is_numeric($deviation)) ? $this->maximumDeviation : (float) $deviation;
+        $maximumDeviation = (!$deviation && !is_numeric($deviation)) ? $this->maximumDeviation : (float)$deviation;
 
         $deviationResult = $this->getDeviation($identifier, $elementID, $excludeElements, $deleteElements);
 
@@ -216,7 +223,7 @@ class VisualCeption extends CodeceptionModule
         }
 
         if ($seeChanges && $deviationResult["deviation"] <= $maximumDeviation ||
-                !$seeChanges && $deviationResult["deviation"] > $maximumDeviation) {
+            !$seeChanges && $deviationResult["deviation"] > $maximumDeviation) {
             $compareScreenshotPath = $this->getDeviationScreenshotPath($identifier);
             $deviationResult["deviationImage"]->writeImage($compareScreenshotPath);
 
@@ -235,11 +242,11 @@ class VisualCeption extends CodeceptionModule
         $message .= " (" . round($deviation, 2) . "%).\n";
 
         return new ImageDeviationException(
-                $message,
-                $identifier,
-                $this->getExpectedScreenshotPath($identifier),
-                $this->getScreenshotPath($identifier),
-                $compareScreenshotPath
+            $message,
+            $identifier,
+            $this->getExpectedScreenshotPath($identifier),
+            $this->getScreenshotPath($identifier),
+            $compareScreenshotPath
         );
     }
 
@@ -276,9 +283,9 @@ class VisualCeption extends CodeceptionModule
 
         $deviation = $compareResult[1] * 100;
 
-        $this->debug("The deviation between the images is ". $deviation . " percent");
+        $this->debug("The deviation between the images is " . $deviation . " percent");
 
-        return array (
+        return array(
             "deviation" => $deviation,
             "deviationImage" => $compareResult[0],
             "currentImage" => $compareResult['currentImage'],
@@ -332,8 +339,8 @@ class VisualCeption extends CodeceptionModule
      */
     private function getScreenshotName($identifier)
     {
-        $identifier = str_replace(array('/', '\\'),array('.', '.'),$identifier);
-        return $identifier.'.png';
+        $identifier = str_replace(array('/', '\\'), array('.', '.'), $identifier);
+        return $identifier . '.png';
     }
 
     /**
@@ -379,7 +386,7 @@ class VisualCeption extends CodeceptionModule
      */
     private function createScreenshot($identifier, array $coords, array $excludeElements = array(), array $deleteElements = array())
     {
-        $screenShotDir = $this->currentImageDir.'debug/';
+        $screenShotDir = $this->currentImageDir . 'debug/';
 
         if (!is_dir($screenShotDir)) {
             mkdir($screenShotDir, 0777, true);
@@ -464,7 +471,7 @@ class VisualCeption extends CodeceptionModule
      */
     private function resetHideElementsForScreenshot(array $excludeElements)
     {
-        if($excludeElements) {
+        if ($excludeElements) {
             $this->setElementsAttribute($excludeElements, 'visibility', 'visible');
             $this->webDriverModule->wait($this->operationTimeout);
         }
@@ -492,10 +499,10 @@ class VisualCeption extends CodeceptionModule
      * @param $identifier identifies your test object
      * @return string Path of the deviation image
      */
-    private function getDeviationScreenshotPath ($identifier, $alternativePrefix = '')
+    private function getDeviationScreenshotPath($identifier, $alternativePrefix = '')
     {
         $debugDir = $this->currentImageDir . 'debug/';
-        $prefix = ( $alternativePrefix === '') ? 'compare' : $alternativePrefix;
+        $prefix = ($alternativePrefix === '') ? 'compare' : $alternativePrefix;
         return $debugDir . $prefix . $this->getScreenshotName($identifier);
     }
 
@@ -516,7 +523,7 @@ class VisualCeption extends CodeceptionModule
         if (!file_exists($expectedImagePath)) {
             $this->debug("Copying image (from $currentImagePath to $expectedImagePath");
             copy($currentImagePath, $expectedImagePath);
-            return array (null, 0, 'currentImage' => null);
+            return array(null, 0, 'currentImage' => null);
         } else {
             return $this->compareImages($expectedImagePath, $currentImagePath);
         }
@@ -550,8 +557,7 @@ class VisualCeption extends CodeceptionModule
             $result[0]->setImageFormat('png');
             $result['currentImage'] = clone $imagick2;
             $result['currentImage']->setImageFormat('png');
-        }
-        catch (\ImagickException $e) {
+        } catch (\ImagickException $e) {
             $this->debug("IMagickException! could not campare image1 ($image1) and image2 ($image2).\nExceptionMessage: " . $e->getMessage());
             $this->fail($e->getMessage() . ", image1 $image1 and image2 $image2.");
         }
@@ -564,17 +570,6 @@ class VisualCeption extends CodeceptionModule
             return;
         }
         $this->logFile = \Codeception\Configuration::logDir() . '/vcresult.html';
-
-        if (array_key_exists('templateVars', $this->config)) {
-            $this->templateVars = $this->config["templateVars"];
-        }
-
-        if (array_key_exists('templateFile', $this->config)) {
-            $this->templateFile = (file_exists($this->config["templateFile"]) ? "" : __DIR__ ) . $this->config["templateFile"];
-        } else {
-            $this->templateFile = __DIR__ . "/report/template.php";
-        }
-        $this->debug( "VisualCeptionReporter: templateFile = " . $this->templateFile );
     }
 
     public function _encodeId($id)
