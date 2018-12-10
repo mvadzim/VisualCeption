@@ -28,12 +28,13 @@ class VisualCeption extends CodeceptionModule
         'currentImageDir' => 'visualception/current/[browser]/',
         'report' => false,
         'module' => 'WebDriver',
-        'fullScreenShot' => false
+        'fullScreenShot' => false,
+        'referenceImageDeleteLink' => ''
     ];
 
     protected $saveCurrentImageIfFailure;
     private $referenceImageDir;
-
+    private $referenceImageDeleteLink = '';
     /**
      * This var represents the directory where the taken images are stored
      * @var string
@@ -69,11 +70,11 @@ class VisualCeption extends CodeceptionModule
         $this->maximumDeviation = $this->config["maximumDeviation"];
         $this->saveCurrentImageIfFailure = (boolean)$this->config["saveCurrentImageIfFailure"];
         $this->webDriverModule = $this->getModule($this->config['module']);
-        if (false !== strpos($this->config["referenceImageDir"] . $this->config["currentImageDir"] . $this->config['report'], '[browser]')) {
+        if (false !== strpos($this->config["referenceImageDir"] . $this->config["currentImageDir"] .$this->config['referenceImageDeleteLink'], '[browser]')) {
             $browserName = $this->webDriverModule->_getConfig('browser');
             $this->config["referenceImageDir"] = str_replace('[browser]', $browserName, $this->config["referenceImageDir"]);
             $this->config["currentImageDir"] = str_replace('[browser]', $browserName, $this->config["currentImageDir"]);
-            $this->config['report'] = str_replace('[browser]', $browserName, $this->config['report']);
+            $this->referenceImageDeleteLink = str_replace('[browser]', $browserName, $this->config['referenceImageDeleteLink']);
         }
         if (file_exists($this->config["referenceImageDir"])) {
             $this->referenceImageDir = $this->config["referenceImageDir"];
@@ -97,7 +98,7 @@ class VisualCeption extends CodeceptionModule
         $failedTests = $this->failed;
         $failedTestsMetadata = $this->failedTestsMetadata;
         $referenceImageDir = $this->referenceImageDir;
-        $i = 0;
+
 
         if (!file_exists($this->logFile)) {
             ob_start();
@@ -130,13 +131,16 @@ class VisualCeption extends CodeceptionModule
                 $title = $title . ' (' . $comment . ')';
             }
             $url = $this->_decodeId($fail->getIdentifier());
+            $this->referenceImageDeleteLink = str_replace('[file]', $this->getScreenshotName($fail->getIdentifier()), $this->referenceImageDeleteLink);
+
             $metadata = [
                 'title' => $title,
                 'url' => $url,
                 'referenceImagePath' => $this->getExpectedScreenshotPath($fail->getIdentifier()),
                 'env' => $test->getMetadata()->getEnv(),
                 'file' => $test->getMetadata()->getFilename(),
-                'error' => $fail->getMessage()
+                'error' => $fail->getMessage(),
+                'referenceImageDeleteLink' => $this->referenceImageDeleteLink
             ];
             $this->failedTestsMetadata[$key] = $metadata;
 

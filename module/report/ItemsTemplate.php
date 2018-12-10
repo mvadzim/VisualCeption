@@ -8,7 +8,8 @@
             <br/><b>Reference image:</b>
             <span class="copy_to_clipboard"
                   title="click to copy to clipboard"><?= $failedTestsMetadata[$id]['referenceImagePath']; ?></span>
-            <?= $failedTestsMetadata[$id]['url'] ? "<br/><b>Url: </b><a href=\"{$failedTestsMetadata[$id]['url']}\" target=_blank style=\"text-overflow:ellipsis\">{$failedTestsMetadata[$id]['url']}</a>" : ''; ?>
+            <?= $failedTestsMetadata[$id]['referenceImageDeleteLink'] ? "<span data-href=\"{$failedTestsMetadata[$id]['referenceImageDeleteLink']}\" class=\"delete_reference_link\"> [x] Delete reference image</span>" : ""; ?>
+            <?= $failedTestsMetadata[$id]['url'] ? "<br/><b>Url: </b><a href=\"{$failedTestsMetadata[$id]['url']}\" target=_blank style=\"text-overflow:ellipsis\">{$failedTestsMetadata[$id]['url']}</a>" : ""; ?>
             <br/><b>Error message:</b> <?= $failedTestsMetadata[$id]['error']; ?>
         </td>
         <td>

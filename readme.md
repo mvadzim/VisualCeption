@@ -16,6 +16,7 @@ modules:
             referenceImageDir: "/home/qa/img_storage/[browser]/"  # "[browser]" replaced to "firefox"
             currentImageDir: "visualception/current/[browser]/"   # tests/_output/visualception/current/firefox/
             report: true         # tests/_output/vcresult.html
+            referenceImageDeleteLink: "http://mytestserver.example.com/delete_reference_image.php?file=[file]&browser=[browser]&environment=dev"
  ```
 ## Note
 
@@ -29,6 +30,7 @@ modules:
 * Новый шаблон для отчетов
 * Возможность удалять элементы со страницы (display:none)
 * В отчете не затираются результаты предыдущих запусков
+* Добавлена ссылка на удаление эталонных скриншотов
 
 #### Простой пример
  ```php

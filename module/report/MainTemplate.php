@@ -36,9 +36,24 @@
             border: 4px outset black;
         }
 
-        .copy_to_clipboard {
+        .copy_to_clipboard, .delete_reference_link {
             cursor: pointer;
             border-bottom: 1px dotted black;
+        }
+
+        .delete_reference_link {
+            font-weight: bold;
+        }
+
+        #delete_alert {
+            position: fixed;
+            display: none;
+            min-width: 25%;
+            min-height: 5%;
+            padding: 15px;
+            z-index: 999;
+            bottom: 0;
+            background-color: #f1f1f1;
         }
 
         .test_details {
@@ -70,6 +85,7 @@
     </tbody>
 </table>
 <div id="zoom"><img src="" title="click here to hide it"></div>
+<div id="delete_alert"></div>
 <script>
     let table;
 
@@ -89,9 +105,20 @@
                 navigator.clipboard.writeText(text);
             }
         });
+        $('.delete_reference_link').click(function () {
+            $("#delete_alert").load($(this).data('href'));
+            $("#delete_alert").fadeIn(300).delay(3000).fadeOut(400);
+        })
+
         table = $('#table').DataTable(
             {
-                "lengthMenu": [[10, 50, -1], [10, 50, "All"]]
+                "lengthMenu": [[10, 50, -1], [10, 50, "All"]],
+                "columns": [
+                    { "orderable": true },
+                    { "orderable": false },
+                    { "orderable": false },
+                    { "orderable": false }
+                ]
             }
         );
     });
