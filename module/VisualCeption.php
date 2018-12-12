@@ -131,8 +131,7 @@ class VisualCeption extends CodeceptionModule
                 $title = $title . ' (' . $comment . ')';
             }
             $url = $this->_decodeId($fail->getIdentifier());
-            $this->referenceImageDeleteLink = str_replace('[file]', $this->getScreenshotName($fail->getIdentifier()), $this->referenceImageDeleteLink);
-
+            $referenceImageDeleteLink = str_replace('[file]', $this->getScreenshotName($fail->getIdentifier()), $this->referenceImageDeleteLink);
             $metadata = [
                 'title' => $title,
                 'url' => $url,
@@ -140,7 +139,7 @@ class VisualCeption extends CodeceptionModule
                 'env' => $test->getMetadata()->getEnv(),
                 'file' => $test->getMetadata()->getFilename(),
                 'error' => $fail->getMessage(),
-                'referenceImageDeleteLink' => $this->referenceImageDeleteLink
+                'referenceImageDeleteLink' => $referenceImageDeleteLink
             ];
             $this->failedTestsMetadata[$key] = $metadata;
 
