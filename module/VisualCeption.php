@@ -136,7 +136,7 @@ class VisualCeption extends CodeceptionModule
                 'title' => $title,
                 'url' => $url,
                 'referenceImagePath' => $this->getExpectedScreenshotPath($fail->getIdentifier()),
-                'env' => $test->getMetadata()->getEnv(),
+                'env' => $test->getMetadata()->getCurrent('env'),
                 'file' => $test->getMetadata()->getFilename(),
                 'error' => $fail->getMessage(),
                 'referenceImageDeleteLink' => $referenceImageDeleteLink
