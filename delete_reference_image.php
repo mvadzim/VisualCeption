@@ -1,8 +1,13 @@
 <?php
-/*
+/**
  * https://github.com/mvadzim/VisualCeption
+ *
+ * Sample config:
+ * - VisualCeption:
+ *          referenceImageDeleteLink: "http://mytestserver.example.com/delete_reference_image.php?file=[file]&browser=[browser]&environment=dev"
  */
-$path = '/home/qa/img_storage/[browser]/[environment]/[file]';
+$path = '/home/qa/img_storage/[browser]/[environment]/[file]'; // Change to you expected image path!
+
 $file = trim(urldecode($_GET["file"]), '\/'); // testimage.png
 $browser = trim(urldecode($_GET["browser"]), '\/'); // chrome, firefox etc.
 $environment = trim(urldecode($_GET["environment"]), '\/'); // prod, dev, stage, qa etc.

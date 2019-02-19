@@ -401,7 +401,7 @@ class VisualCeption extends CodeceptionModule
         $height = 0;
         if ($this->config["fullScreenShot"] == "true" || $this->config["fullScreenShot"] == "scroll") {
             $height = $this->webDriver->executeScript("var ele=document.querySelector('html'); return ele.scrollHeight;");
-            $viewportHeight = $this->webDriver->executeScript("return window.innerHeight");
+            list($viewportHeight, $devicePixelRatio) = $this->webDriver->executeScript("return [window.innerHeight, window.devicePixelRatio]");
 
             $itr = intval($height / $viewportHeight);
 
@@ -414,7 +414,7 @@ class VisualCeption extends CodeceptionModule
             $screenshotBinary = $this->webDriver->takeScreenshot();
             $screenShotImage->readimageblob($screenshotBinary);
             $heightOffset = $viewportHeight - ($height - ($itr * $viewportHeight));
-            $screenShotImage->cropImage(0, 0, 0, $heightOffset * 2);
+            $screenShotImage->cropImage(0, 0, 0, $heightOffset * $devicePixelRatio);
 
             $screenShotImage->resetIterator();
             $fullShot = $screenShotImage->appendImages(true);
