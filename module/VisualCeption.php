@@ -130,7 +130,7 @@ class VisualCeption extends CodeceptionModule
                 $comment = $test->getMetadata()->getCurrent('example')['wantTo'];
                 $title = $title . ' (' . $comment . ')';
             }
-            $url = $this->_decodeId($fail->getIdentifier());
+            $url = filter_var($this->_decodeId($fail->getIdentifier()), FILTER_VALIDATE_URL);
             $referenceImageDeleteLink = str_replace('[file]', $this->getScreenshotName($fail->getIdentifier()), $this->referenceImageDeleteLink);
             $metadata = [
                 'title' => $title,
