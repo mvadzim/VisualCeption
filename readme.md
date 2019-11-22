@@ -2,6 +2,10 @@
 
 This is **fork** of [visual regression tests for Codeception](https://github.com/Codeception/VisualCeption).
 
+## Install
+
+    composer require mvadzim/visualception:dev-master
+
 #### Sample config:
 ```yaml
 modules:

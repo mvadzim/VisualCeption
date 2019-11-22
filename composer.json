@@ -1,15 +1,14 @@
 {
   "name": "mvadzim/visualception",
   "description": "Visual regression tests for Codeception",  
-  "homepage": "https://github.com/Codeception/VisualCeption",
+  "homepage": "https://github.com/mvadzim/VisualCeption",
   "license": "Apache-2.0",
   "require": {
     "php": ">=5.4.0",
     "ext-imagick": "*"
   },
   "require-dev": {
-    "codeception/codeception": "^2.2.0",
-    "phpunit/phpunit": "^5.7.0"
+    "codeception/codeception": "^2.3|^3.0"
   },
   "autoload": {
     "classmap": ["module/"]
