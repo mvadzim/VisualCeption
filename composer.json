@@ -8,7 +8,7 @@
     "ext-imagick": "*"
   },
   "require-dev": {
-    "codeception/codeception": "^2.3|^3.0"
+    "codeception/codeception": "^2.3|^3.0|^4.0"
   },
   "autoload": {
     "classmap": ["module/"]
