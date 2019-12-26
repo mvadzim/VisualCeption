@@ -70,7 +70,7 @@ class VisualCeption extends CodeceptionModule
         $this->maximumDeviation = $this->config["maximumDeviation"];
         $this->saveCurrentImageIfFailure = (boolean)$this->config["saveCurrentImageIfFailure"];
         $this->webDriverModule = $this->getModule($this->config['module']);
-        if (false !== strpos($this->config["referenceImageDir"] . $this->config["currentImageDir"] .$this->config['referenceImageDeleteLink'], '[browser]')) {
+        if (false !== strpos($this->config["referenceImageDir"] . $this->config["currentImageDir"] . $this->config['referenceImageDeleteLink'], '[browser]')) {
             $browserName = $this->webDriverModule->_getConfig('browser');
             $this->config["referenceImageDir"] = str_replace('[browser]', $browserName, $this->config["referenceImageDir"]);
             $this->config["currentImageDir"] = str_replace('[browser]', $browserName, $this->config["currentImageDir"]);
@@ -78,7 +78,7 @@ class VisualCeption extends CodeceptionModule
         }
         if (file_exists($this->config["referenceImageDir"])) {
             $this->referenceImageDir = $this->config["referenceImageDir"];
-        } else {
+        } elseif (false === strpos($this->config['referenceImageDir'], '[test_class_name]')) {
             $this->debug("Directory does not exist: $this->referenceImageDir");
             $this->referenceImageDir = codecept_data_dir() . $this->config["referenceImageDir"];
             if (!is_dir($this->referenceImageDir)) {
@@ -160,6 +160,14 @@ class VisualCeption extends CodeceptionModule
         }
         if (!class_exists('Imagick')) {
             throw new \Codeception\Exception\ConfigurationException("VisualCeption requires ImageMagick PHP Extension but it was not installed");
+        }
+        if (false !== strpos($this->config["referenceImageDir"] . $this->config["currentImageDir"] . $this->config['referenceImageDeleteLink'], '[test_class_name]')) {
+            $testClassName = get_class($test->getTestClass());
+            $this->config["referenceImageDir"] = str_replace('[test_class_name]', $testClassName, $this->config["referenceImageDir"]);
+            $this->config["currentImageDir"] = str_replace('[test_class_name]', $testClassName, $this->config["currentImageDir"]);
+            $this->referenceImageDeleteLink = str_replace('[test_class_name]', $testClassName, $this->config['referenceImageDeleteLink']);
+            $this->_reconfigure($this->config);
+            $this->_initialize();
         }
 
         $this->webDriver = $this->webDriverModule->webDriver;
