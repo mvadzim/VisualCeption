@@ -3,9 +3,6 @@
 namespace Codeception\Module;
 
 use Codeception\Module as CodeceptionModule;
-use Codeception\Test\Descriptor;
-use RemoteWebDriver;
-use Codeception\Module\VisualCeption\Utils;
 
 /**
  * Class VisualCeption
@@ -42,22 +39,11 @@ class VisualCeption extends CodeceptionModule
     private $currentImageDir;
 
     private $maximumDeviation = 0;
-    private $operationTimeout = 0.5;
+    private $operationTimeout = 0.4;
 
-    /**
-     * @var RemoteWebDriver
-     */
+
     private $webDriver = null;
-
-    /**
-     * @var WebDriver
-     */
     private $webDriverModule = null;
-
-    /**
-     * @var Utils
-     */
-    private $utils;
 
     private $failed = array();
     private $failedTestsMetadata = array();
@@ -65,28 +51,9 @@ class VisualCeption extends CodeceptionModule
 
     public function _initialize()
     {
-        $this->utils = new Utils();
-
-        $this->maximumDeviation = $this->config["maximumDeviation"];
-        $this->saveCurrentImageIfFailure = (boolean)$this->config["saveCurrentImageIfFailure"];
+        $this->maximumDeviation = $this->config['maximumDeviation'];
+        $this->saveCurrentImageIfFailure = (boolean)$this->config['saveCurrentImageIfFailure'];
         $this->webDriverModule = $this->getModule($this->config['module']);
-        if (false !== strpos($this->config["referenceImageDir"] . $this->config["currentImageDir"] . $this->config['referenceImageDeleteLink'], '[browser]')) {
-            $browserName = $this->webDriverModule->_getConfig('browser');
-            $this->config["referenceImageDir"] = str_replace('[browser]', $browserName, $this->config["referenceImageDir"]);
-            $this->config["currentImageDir"] = str_replace('[browser]', $browserName, $this->config["currentImageDir"]);
-            $this->referenceImageDeleteLink = str_replace('[browser]', $browserName, $this->config['referenceImageDeleteLink']);
-        }
-        if (file_exists($this->config["referenceImageDir"])) {
-            $this->referenceImageDir = $this->config["referenceImageDir"];
-        } elseif (false === strpos($this->config['referenceImageDir'], '[test_class_name]')) {
-            $this->debug("Directory does not exist: $this->referenceImageDir");
-            $this->referenceImageDir = codecept_data_dir() . $this->config["referenceImageDir"];
-            if (!is_dir($this->referenceImageDir)) {
-                $this->debug("Creating directory: $this->referenceImageDir");
-                @mkdir($this->referenceImageDir, 0777, true);
-            }
-        }
-        $this->currentImageDir = codecept_output_dir() . $this->config["currentImageDir"];
         $this->_initVisualReport();
     }
 
@@ -102,14 +69,14 @@ class VisualCeption extends CodeceptionModule
 
         if (!file_exists($this->logFile)) {
             ob_start();
-            include_once "report/MainTemplate.php";
+            include_once 'report/MainTemplate.php';
             $reportContent = ob_get_contents();
             ob_clean();
             file_put_contents($this->logFile, $reportContent);
-            $this->debug("Trying to store file (" . $this->logFile . ")");
+            $this->debug('Trying to store file (' . $this->logFile . ')');
         }
         ob_start();
-        include_once "report/ItemsTemplate.php";
+        include_once 'report/ItemsTemplate.php';
         $itemsContent = ob_get_contents();
         ob_clean();
 
@@ -128,7 +95,7 @@ class VisualCeption extends CodeceptionModule
             $title = empty($test->getFeature()) ? $test->getName() : mb_strstr($test->getFeature() . "|", "|", true);
             if (!is_null($test->getMetadata()->getCurrent('example')) && array_key_exists('wantTo', $test->getMetadata()->getCurrent('example'))) {
                 $comment = $test->getMetadata()->getCurrent('example')['wantTo'];
-                $title = $title . ' (' . $comment . ')';
+                $title .= ' (' . $comment . ')';
             }
             $url = filter_var($this->_decodeId($fail->getIdentifier()), FILTER_VALIDATE_URL);
             $referenceImageDeleteLink = str_replace('[file]', $this->getScreenshotName($fail->getIdentifier()), $this->referenceImageDeleteLink);
@@ -156,19 +123,36 @@ class VisualCeption extends CodeceptionModule
     public function _before(\Codeception\TestInterface $test)
     {
         if (!$this->hasModule($this->config['module'])) {
-            throw new \Codeception\Exception\ConfigurationException("VisualCeption uses the WebDriver. Please ensure that this module is activated.");
+            throw new \Codeception\Exception\ConfigurationException('VisualCeption uses the WebDriver. Please ensure that this module is activated.');
         }
         if (!class_exists('Imagick')) {
-            throw new \Codeception\Exception\ConfigurationException("VisualCeption requires ImageMagick PHP Extension but it was not installed");
+            throw new \Codeception\Exception\ConfigurationException('VisualCeption requires ImageMagick PHP Extension but it was not installed');
         }
-        if (false !== strpos($this->config["referenceImageDir"] . $this->config["currentImageDir"] . $this->config['referenceImageDeleteLink'], '[test_class_name]')) {
+        $config = $this->config;
+        if (false !== strpos($this->config['referenceImageDir'] . $this->config['currentImageDir'] . $this->config['referenceImageDeleteLink'], '[browser]')) {
+            $browserName = $this->webDriverModule->_getConfig('browser');
+            $config['referenceImageDir'] = str_replace('[browser]', $browserName, $config['referenceImageDir']);
+            $config['currentImageDir'] = str_replace('[browser]', $browserName, $config['currentImageDir']);
+            $config['referenceImageDeleteLink'] = str_replace('[browser]', $browserName, $config['referenceImageDeleteLink']);
+        }
+        if (false !== strpos($this->config['referenceImageDir'] . $this->config['currentImageDir'] . $this->config['referenceImageDeleteLink'], '[test_class_name]')) {
             $testClassName = get_class($test->getTestClass());
-            $this->config["referenceImageDir"] = str_replace('[test_class_name]', $testClassName, $this->config["referenceImageDir"]);
-            $this->config["currentImageDir"] = str_replace('[test_class_name]', $testClassName, $this->config["currentImageDir"]);
-            $this->referenceImageDeleteLink = str_replace('[test_class_name]', $testClassName, $this->config['referenceImageDeleteLink']);
-            $this->_reconfigure($this->config);
-            $this->_initialize();
+            $config['referenceImageDir'] = str_replace('[test_class_name]', $testClassName, $config['referenceImageDir']);
+            $config['currentImageDir'] = str_replace('[test_class_name]', $testClassName, $config['currentImageDir']);
+            $config['referenceImageDeleteLink'] = str_replace('[test_class_name]', $testClassName, $config['referenceImageDeleteLink']);
         }
+        if (file_exists($config['referenceImageDir'])) {
+            $this->referenceImageDir = $config['referenceImageDir'];
+        } else {
+            $this->debug('Directory does not exist: ' . $config['referenceImageDir']);
+            $this->referenceImageDir = codecept_data_dir($config['referenceImageDir']);
+            if (!is_dir($this->referenceImageDir)) {
+                $this->debug("Creating directory: $this->referenceImageDir");
+                @mkdir($this->referenceImageDir, 0777, true);
+            }
+        }
+        $this->currentImageDir = codecept_output_dir() . $config['currentImageDir'];
+        $this->referenceImageDeleteLink = $config['referenceImageDeleteLink'];
 
         $this->webDriver = $this->webDriverModule->webDriver;
 
@@ -192,6 +176,7 @@ class VisualCeption extends CodeceptionModule
      * @param string $identifier Identifies your test object
      * @param string $elementID DOM ID of the element, which should be screenshotted
      * @param string|array $excludeElements Element name or array of Element names, which should not appear in the screenshot
+     * @param array $deleteElements
      * @param float $deviation
      */
     public function seeVisualChanges($identifier, $elementID = null, $excludeElements = array(), array $deleteElements = array(), $deviation = null)
@@ -210,6 +195,7 @@ class VisualCeption extends CodeceptionModule
      * @param string $identifier identifies your test object
      * @param string $elementID DOM ID of the element, which should be screenshotted
      * @param string|array $excludeElements string of Element name or array of Element names, which should not appear in the screenshot
+     * @param array $deleteElements
      * @param float $deviation
      */
     public function dontSeeVisualChanges($identifier, $elementID = null, $excludeElements = array(), array $deleteElements = array(), $deviation = null)
@@ -229,28 +215,28 @@ class VisualCeption extends CodeceptionModule
 
         $deviationResult = $this->getDeviation($identifier, $elementID, $excludeElements, $deleteElements);
 
-        if (is_null($deviationResult["deviationImage"])) {
+        if ($deviationResult['deviationImage'] === null) {
             return;
         }
 
-        if ($seeChanges && $deviationResult["deviation"] <= $maximumDeviation ||
-            !$seeChanges && $deviationResult["deviation"] > $maximumDeviation) {
+        if (($seeChanges && $deviationResult['deviation'] <= $maximumDeviation) ||
+            (!$seeChanges && $deviationResult['deviation'] > $maximumDeviation)) {
             $compareScreenshotPath = $this->getDeviationScreenshotPath($identifier);
-            $deviationResult["deviationImage"]->writeImage($compareScreenshotPath);
+            $deviationResult['deviationImage']->writeImage($compareScreenshotPath);
 
-            throw $this->createImageDeviationException($identifier, $compareScreenshotPath, $deviationResult["deviation"], $seeChanges);
+            throw $this->createImageDeviationException($identifier, $compareScreenshotPath, $deviationResult['deviation'], $seeChanges);
         }
     }
 
     private function createImageDeviationException($identifier, $compareScreenshotPath, $deviation, $seeChanges)
     {
         if ($seeChanges) {
-            $message = "The deviation of the taken screenshot is too low";
+            $message = 'The deviation of the taken screenshot is too low';
         } else {
-            $message = "The deviation of the taken screenshot is too high";
+            $message = 'The deviation of the taken screenshot is too high';
         }
 
-        $message .= " (" . round($deviation, 2) . "%).\n";
+        $message .= ' (' . round($deviation, 2) . "%).\n";
 
         return new ImageDeviationException(
             $message,
@@ -283,7 +269,9 @@ class VisualCeption extends CodeceptionModule
      * @param string $identifier Identifies your test object
      * @param string $elementID DOM ID of the element, which should be screenshotted
      * @param array $excludeElements Element names, which should not appear in the screenshot
+     * @param array $deleteElements
      * @return array Includes the calculation of deviation in percent and the diff-image
+     * @throws \Exception
      */
     private function getDeviation($identifier, $elementID, array $excludeElements = array(), array $deleteElements = array())
     {
@@ -294,12 +282,12 @@ class VisualCeption extends CodeceptionModule
 
         $deviation = $compareResult[1] * 100;
 
-        $this->debug("The deviation between the images is " . $deviation . " percent");
+        $this->debug('The deviation between the images is ' . $deviation . ' percent');
 
         return array(
-            "deviation" => $deviation,
-            "deviationImage" => $compareResult[0],
-            "currentImage" => $compareResult['currentImage'],
+            'deviation' => $deviation,
+            'deviationImage' => $compareResult[0],
+            'currentImage' => $compareResult['currentImage'],
         );
     }
 
@@ -316,10 +304,11 @@ class VisualCeption extends CodeceptionModule
      * Used native JavaScript.
      * @param string $elementId DOM ID of the element, which should be screenshotted
      * @return array coordinates of the element
+     * @throws \Exception
      */
     private function getCoordinates($elementId)
     {
-        if (is_null($elementId)) {
+        if ($elementId === null) {
             $elementId = 'body';
         }
 
@@ -393,25 +382,27 @@ class VisualCeption extends CodeceptionModule
      * @param string $identifier identifies your test object
      * @param array $coords Coordinates where the DOM element is located
      * @param array $excludeElements List of elements, which should not appear in the screenshot
+     * @param array $deleteElements
      * @return string Path of the current screenshot image
+     * @throws \ImagickException
      */
     private function createScreenshot($identifier, array $coords, array $excludeElements = array(), array $deleteElements = array())
     {
         $screenShotDir = $this->currentImageDir . 'debug/';
 
         if (!is_dir($screenShotDir)) {
-            mkdir($screenShotDir, 0777, true);
+            @mkdir($screenShotDir, 0777, true);
         }
 
         $elementPath = $this->getScreenshotPath($identifier);
         $screenShotImage = new \Imagick();
         $width = 0;
         $height = 0;
-        if ($this->config["fullScreenShot"] == "true" || $this->config["fullScreenShot"] == "scroll") {
+        if ($this->config['fullScreenShot'] == 'true' || $this->config['fullScreenShot'] == 'scroll') {
             $height = $this->webDriver->executeScript("var ele=document.querySelector('html'); return ele.scrollHeight;");
-            list($viewportHeight, $devicePixelRatio) = $this->webDriver->executeScript("return [window.innerHeight, window.devicePixelRatio]");
+            list($viewportHeight, $devicePixelRatio) = $this->webDriver->executeScript('return [window.innerHeight, window.devicePixelRatio]');
 
-            $itr = intval($height / $viewportHeight);
+            $itr = (int)($height / $viewportHeight);
 
             for ($i = 0; $i < $itr; $i++) {
                 $screenshotBinary = $this->webDriver->takeScreenshot();
@@ -430,7 +421,7 @@ class VisualCeption extends CodeceptionModule
 
             return $elementPath;
 
-        } elseif ($this->config["fullScreenShot"] == "resize") {
+        } elseif ($this->config['fullScreenShot'] == 'resize') {
 
             $width = (int)$this->webDriver->manage()->window()->getSize()->getWidth();
             $height = (int)$this->webDriver->manage()->window()->getSize()->getHeight();
@@ -445,7 +436,7 @@ class VisualCeption extends CodeceptionModule
         $screenshotBinary = $this->webDriver->takeScreenshot();
         $screenShotImage->readimageblob($screenshotBinary);
 
-        if ($this->config["fullScreenShot"] != "resize") {
+        if ($this->config['fullScreenShot'] != 'resize') {
             $screenShotImage->cropImage($coords['width'], $coords['height'], $coords['offset_x'], $coords['offset_y']);
         }
         $screenShotImage->writeImage($elementPath);
@@ -453,7 +444,7 @@ class VisualCeption extends CodeceptionModule
         $this->resetHideElementsForScreenshot($excludeElements);
         $this->resetDeleteElementsForScreenshot($deleteElements);
 
-        if ($this->config["fullScreenShot"] == "resize") {
+        if ($this->config['fullScreenShot'] == 'resize') {
             $this->webDriverModule->resizeWindow($width, $height);
             $this->debug('Resize back to ' . $width . 'x' . $height);
         }
@@ -507,6 +498,7 @@ class VisualCeption extends CodeceptionModule
      * Returns the image path including the filename of a deviation image
      *
      * @param $identifier identifies your test object
+     * @param string $alternativePrefix
      * @return string Path of the deviation image
      */
     private function getDeviationScreenshotPath($identifier, $alternativePrefix = '')
@@ -545,6 +537,7 @@ class VisualCeption extends CodeceptionModule
      * @param $image1 Path to the exprected reference image
      * @param $image2 Path to the current image in the screenshot
      * @return array Result of the comparison
+     * @throws \ImagickException
      */
     private function compareImages($image1, $image2)
     {
